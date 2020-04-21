@@ -1,0 +1,12 @@
+name: final_project_2
+title: final_project_2
+username:
+account: taylor-greenberg-goldy
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2045943
+bundleId: 3042004
+url: https://taylor-greenberg-goldy.shinyapps.io/final_project_2/
+when: 1587436500.80238
+asMultiple: FALSE
+asStatic: FALSE
