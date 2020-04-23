@@ -33,30 +33,7 @@ purchases <- visits %>%
   pivot_longer(cols = c(total_sessions, total_carts, total_checkouts, total_orders_placed, total_conversion), names_to = "action") 
 
 
-# Using "memoise" to automatically cache the results
-getTermMatrix <- memoise(function(original_query) {
-  # Careful not to let just any name slip in here; a
-  # malicious user could manipulate this value.
-  if (!(original_query %in% storesearch))
-    stop("Unknown Search")
-  
-  text <- readLines(sprintf("./%s.txt.gz", book),
-                    encoding="UTF-8")
-  
-  myCorpus = Corpus(VectorSource(text))
-  myCorpus = tm_map(myCorpus, content_transformer(tolower))
-  myCorpus = tm_map(myCorpus, removePunctuation)
-  myCorpus = tm_map(myCorpus, removeNumbers)
-  myCorpus = tm_map(myCorpus, removeWords,
-                    c(stopwords("SMART"), "thy", "thou", "thee", "the", "and", "but"))
-  
-  myDTM = TermDocumentMatrix(myCorpus,
-                             control = list(minWordLength = 1))
-  
-  m = as.matrix(myDTM)
-  
-  sort(rowSums(m), decreasing = TRUE)
-})
+
 
 
 ui <- fluidPage(theme = shinytheme("flatly"), 
@@ -104,7 +81,7 @@ ui <- fluidPage(theme = shinytheme("flatly"),
         
         # Show Word Cloud
         mainPanel(
-          plotOutput("plot")
+          plotOutput("wordplot")
         )
       )
     ),
@@ -199,11 +176,28 @@ server <- function(input, output) {
       # Make the wordcloud drawing predictable during a session
       wordcloud_rep <- repeatable(wordcloud)
       
-      output$plot <- renderPlot({
-        v <- terms()
-        wordcloud_rep(original_query(v), v, scale=c(4,0.5),
-                      min.freq = input$freq, max.words=input$max,
-                      colors=brewer.pal(8, "Dark2"))
+      output$wordplot <- renderPlot({
+        #Create a vector containing only the text
+        
+        text <- storesearch$original_query
+        # Create a corpus  
+        docs <- Corpus(VectorSource(text))
+        
+        docs <- docs %>%
+          tm_map(removeNumbers) %>%
+          tm_map(removePunctuation) %>%
+          tm_map(stripWhitespace)
+        docs <- tm_map(docs, content_transformer(tolower))
+        docs <- tm_map(docs, removeWords, stopwords("english"))
+        
+        dtm <- TermDocumentMatrix(docs) 
+        matrix <- as.matrix(dtm) 
+        words <- sort(rowSums(matrix),decreasing=TRUE) 
+        df <- data.frame(word = names(words),freq=words)
+        
+        wordcloud(words = df$word, freq = df$freq, min.freq = 1,
+                  max.words=200, random.order=FALSE, rot.per=0.35,
+                  colors=brewer.pal(8, "Dark2"))
       })
     }
     
