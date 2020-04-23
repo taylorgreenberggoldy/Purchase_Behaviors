@@ -22,7 +22,6 @@ storesearch <- read.csv("storefront_searches_2020-02-29_2020-03-07.csv") %>%
 visits <- read.csv("visits_2019-01-01_2019-12-31.csv") %>%
     clean_names()
 
-# WHY CANT IT READ THIS FILE IN SHINY?
 sales <- read.csv("raw_data/sales_2019-01-01_2019-12-31 (1).csv") %>%
   clean_names()
 
@@ -60,65 +59,63 @@ getTermMatrix <- memoise(function(original_query) {
 })
 
 
-ui <- fluidPage(theme = shinytheme("flatly"),
-                
-                fluidPage(
-                  # Application title
-                  titlePanel("Word Cloud"),
-                  
-                  sidebarLayout(
-                    # Sidebar with a slider and selection inputs
-                    sidebarPanel(
-                      selectInput("selection", "Choose a book:",
-                                  choices = storesearch),
-                      actionButton("update", "Change"),
-                      hr(),
-                      sliderInput("freq",
-                                  "Minimum Frequency:",
-                                  min = 1,  max = 50, value = 15),
-                      sliderInput("max",
-                                  "Maximum Number of Words:",
-                                  min = 1,  max = 300,  value = 100)
-                    ),
-                    
-                    # Show Word Cloud
-                    mainPanel(
-                      plotOutput("plot")
-                    )
-                  )
-                ),
-                # Define UI (user interface) for application, which is the
-                # formating/way the interface will look to users
-                
-                #used navbarpage to create a navbar shiny app set up, used tab panel to create
-                #the tabs within my shiny app, within the first tab map I called imageoutput
-                #referencing map, which I then specified in the server section below, inside the
-                #second tab, about I used h4 to set a header and p to specify a paragraph of
-                #text that I entered
-                
-                navbarPage("Exploring Sales and Customer Interaction
-                    on an E-commerce site",
-                           tabPanel("Are people buying?",
-                                    #used tabset panel to create a panel within my overall panel 
-                                    tabsetPanel(
-                                        tabPanel("Exploring Purchase Behavior",
-                                                 
-                                                 
-                                                 #used sidebar panel to separate the sidebar from the main panel                                 
-                                                 sidebarPanel(
-                                                     
-                                                     selectInput("action", "Select an customer action:",
-                                                                 choices = c("Visits site" = "total_sessions",
-                                                                             "Put item in cart" = "total_carts",
-                                                                             "Continue to checkout screen" = "total_checkouts",
-                                                                             "Order placed" = "total_orders_placed",
-                                                                             "Conversion rate" = "total_conversion")
-                                                     ))))),
-                           
+ui <- fluidPage(theme = shinytheme("flatly"), 
+  
+  navbarPage("Explore the data",
+             tabPanel("Are people buying?",
+                      #used tabset panel to create a panel within my overall panel 
+                      tabsetPanel(
+                        tabPanel("Exploring Purchase Behavior",
+                                 
+                                 #used sidebar panel to separate the sidebar from the main panel                                 
+                                 sidebarPanel(
+                                   
+                                   selectInput("action", "Select an customer action:",
+                                               choices = c("Visits site" = "total_sessions",
+                                                           "Put item in cart" = "total_carts",
+                                                           "Continue to checkout screen" = "total_checkouts",
+                                                           "Order placed" = "total_orders_placed",
+                                                           "Conversion rate" = "total_conversion")
+                                   ))))),
+
+  fluidPage(                         
                            mainPanel(
                                h2("Exploring Sales and Customer Interaction"),
                                plotOutput("plot_1")
                            )),
+  fluidPage(
+    
+    fluidPage(
+      # Application title
+      titlePanel("Word Cloud"),
+      
+      sidebarLayout(
+        # Sidebar with a slider and selection inputs
+        sidebarPanel(
+       
+          hr(),
+          sliderInput("freq",
+                      "Minimum Frequency:",
+                      min = 1,  max = 50, value = 15),
+          sliderInput("max",
+                      "Maximum Number of Words:",
+                      min = 1,  max = 300,  value = 100)
+        ),
+        
+        # Show Word Cloud
+        mainPanel(
+          plotOutput("plot")
+        )
+      )
+    ),
+    # Define UI (user interface) for application, which is the
+    # formating/way the interface will look to users
+    
+    #used navbarpage to create a navbar shiny app set up, used tab panel to create
+    #the tabs within my shiny app, within the first tab map I called imageoutput
+    #referencing map, which I then specified in the server section below, inside the
+    #second tab, about I used h4 to set a header and p to specify a paragraph of
+    #text that I entered
 # NEW TAB NOT SHOWING UP
                         tabPanel("When Is Cash Used?",
                                  tabsetPanel(
@@ -134,7 +131,7 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                                                               "Prepaid/gift/EBT card" = 5,
                                                               "Bank Account" = 6,
                                                               "Online Banking" = 7)
-                                      ))),
+                                      )))),
                                     
                                     #within main panel have plot output which corresponds with function in output section below
                                     
@@ -155,7 +152,7 @@ The data I am using for this project is looking at the behavior of customers and
 
 To pull this data, I'm looking at shopify as well as google analytics that pulls basic measurements off of the website of the e-commerce site.
 
-             You can reach me at taylorgg@mde.harvard.edu")))
+             You can reach me at taylorgg@mde.harvard.edu"))))
 
 server <- function(input, output) {
     datareact <- reactive({

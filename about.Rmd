@@ -1,0 +1,157 @@
+---
+title: "About"
+author: "Taylor Greenberg Goldy"
+date: "2/26/2020"
+output: html_document
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(rsconnect)
+library(shiny)
+library(janitor)
+library(tidyverse)
+library(ggplot2)
+library(shinythemes)
+library(wordcloud2)
+library(tm)
+library(wordcloud2)
+library(wordcloud)
+
+
+storesearch <- read.csv("raw_data/storefront_searches_2020-02-29_2020-03-07.csv") %>%
+    clean_names()
+    
+visits <- read.csv("raw_data/visits_2019-01-01_2019-12-31.csv") %>%
+    clean_names()
+
+sales <- read.csv("raw_data/sales_2019-01-01_2019-12-31 (1).csv") %>%
+    clean_names()
+```
+
+
+This is the link for my repo:
+https://github.com/taylorgreenberggoldy/final_project.git
+
+The data I am using for this project is looking at the behavior of customers and interactions they have on a shopping website that I have access to.  In this data, I'll be able to see how often people are shopping, what are they shopping for as well as what are they searching on the website for.  Through this study, I can hopefully be able to make suggestions to how to improve the overal UX of the site to let people navigate it more thoroughly.  I am slowly getting access to more of the data and will be able to add more files into this project however for now, these two provide sufficient data to get started.
+
+To pull this data, I'm looking at shopify as well as google analytics that pulls basic measurements off of the website of the e-commerce site.
+
+```{r first plot}
+
+# For this plot, I wanted to see for each of the months, what was the turnover
+# rate and see how many people visited the site, put something in their cart,
+# and actually followed through with the process.  To do that, I had to filter
+# down my data to only look at the first of each month.  Then I needed to
+# reformat my data to tidy to visualize.
+
+purchases <- visits %>%
+    filter(day == "2019-01-01"| day == "2019-02-01" | day == "2019-03-01" |  day == "2019-04-01" |  day ==
+               "2019-05-01" | day == "2019-06-01" | day == "2019-07-01" | day == "2019-08-01" |  
+               day == "2019-09-01" |  day == "2019-10-01" |  day == "2019-11-01" |  day == "2019-12-01") %>%
+    pivot_longer(cols = c(total_sessions, total_carts, total_checkouts, total_orders_placed, total_conversion), names_to = "action") 
+    
+# Then I could plot the results here with month on the x axis and the number of
+# actions on the y axis.  I was having trouble renaming the dates to just the
+# month name and would love some help on that! I also need some help in
+# reordering my bars
+
+ggplot(purchases, aes(x = day, y = value, fill = action))+
+    geom_bar(stat = "identity", position = "dodge") +
+    labs(title = "Shopping Turnover for Online Shop",
+      y= "Actions", x = "Month") +
+    theme(axis.text.x=element_text(angle=45, hjust=1))
+
+```
+
+
+```{r}
+
+purchase_history <- sales %>%
+  select(product_title, product_type, customer_id, net_quantity, ordered_item_quantity) %>%
+  group_by(customer_id) %>%
+  count(., customer_id, name = "repeat_purchase") %>%
+  arrange(desc(repeat_purchase))
+
+ggplot(purchase_history, aes(x = customer_id, y = repeat_purchase))+
+    geom_point(stat = "identity", position = "dodge") + 
+  geom_jitter(width = .5, size=1) +
+    labs(title = "Shopping Turnover for Online Shop",
+      y= "SKU's purchased", x = "Unique Users") +
+    theme(axis.text.x=element_text(angle=45, hjust=1))
+
+```
+
+
+
+```{r}
+
+# Time of day purhcasing
+
+time_purchase <- sales %>%
+  select(hour_of_day, total_sales, net_quantity, product_title, product_type)
+
+time_purchase %>%
+  ggplot(aes(x = hour_of_day)) +
+  geom_histogram(binwidth = 2, color = "white") +
+  labs(x = "Hour of Day Shopping",
+       y = "Total Sales",
+       title = "Histogram of distribution of popular shopping times on 24 hour time") +
+  facet_wrap(~ product_type)
+
+
+```
+
+```{r}
+
+# getTermMatrix <- memoise(function(original_query) {
+#   # Careful not to let just any name slip in here; a
+#   # malicious user could manipulate this value.
+#   if (!(original_query %in% storesearch))
+#     stop("Unknown Search")
+#   
+#   text <- readLines(sprintf("./%s.txt.gz", book),
+#                     encoding="UTF-8")
+#   
+#   myCorpus = Corpus(VectorSource(text))
+#   myCorpus = tm_map(myCorpus, content_transformer(tolower))
+#   myCorpus = tm_map(myCorpus, removePunctuation)
+#   myCorpus = tm_map(myCorpus, removeNumbers)
+#   myCorpus = tm_map(myCorpus, removeWords,
+#                     c(stopwords("SMART"), "by", "for", "to", "do", "i"))
+#   
+#   myDTM = TermDocumentMatrix(myCorpus,
+#                              control = list(minWordLength = 1))
+#   
+#   m = as.matrix(myDTM)
+#   
+#   sort(rowSums(m), decreasing = TRUE)
+# })
+```
+
+```{r}
+#Create a vector containing only the text
+
+text <- storesearch$original_query
+# Create a corpus  
+docs <- Corpus(VectorSource(text))
+
+docs <- docs %>%
+  tm_map(removeNumbers) %>%
+  tm_map(removePunctuation) %>%
+  tm_map(stripWhitespace)
+docs <- tm_map(docs, content_transformer(tolower))
+docs <- tm_map(docs, removeWords, stopwords("english"))
+
+dtm <- TermDocumentMatrix(docs) 
+matrix <- as.matrix(dtm) 
+words <- sort(rowSums(matrix),decreasing=TRUE) 
+df <- data.frame(word = names(words),freq=words)
+
+wordcloud(words = df$word, freq = df$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35,
+          colors=brewer.pal(8, "Dark2"))
+```
+
+
