@@ -72,7 +72,33 @@ purchase_history <- sales %>%
   select(product_title, product_type, customer_id, net_quantity, ordered_item_quantity) %>%
   group_by(customer_id) %>%
   count(., customer_id, name = "repeat_purchase") %>%
-  arrange(desc(repeat_purchase))
+  arrange(desc(repeat_purchase)) 
+
+total_purchase <- purchase_history %>%
+  ungroup() %>%
+  summarize(total_purchases = sum(repeat_purchase))
+
+
+options(scipen = 999)
+ml_sales <- sales %>%
+mutate(battery = case_when(str_detect(product_title, regex("battery", ignore_case = TRUE)) ~ 1, TRUE ~ 0),
+       gear = case_when(str_detect(product_title, regex("gear", ignore_case = TRUE)) ~ 1, TRUE ~ 0), 
+        charger = case_when(str_detect(product_title, regex("charger", ignore_case = TRUE)) ~ 1, TRUE ~ 0),
+       control = case_when(str_detect(product_title, regex("control", ignore_case = TRUE)) ~ 1, TRUE ~ 0),
+       drone = case_when(str_detect(product_title, regex("drone", ignore_case = TRUE)) ~ 1, TRUE ~ 0),
+       parts = case_when(str_detect(product_title, regex("parts", ignore_case = TRUE)) ~ 1, TRUE ~ 0)
+) %>%
+  select(customer_id, battery, gear, charger, control, drone, parts) %>%
+  group_by(customer_id) %>%
+  arrange(desc(customer_id))
+
+top <- sales %>%
+  filter(customer_id == purchase_history$customer_id[1])
+
+
+table(sales$product_title)
+
+
 
 ggplot(purchase_history, aes(x = customer_id, y = repeat_purchase))+
     geom_point(stat = "identity", position = "dodge") + 
