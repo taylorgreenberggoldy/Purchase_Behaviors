@@ -158,13 +158,19 @@ top <- sales %>%
 
 table(sales$product_title)
 
-
-ggplot(purchase_history, aes(x = customer_id, y = repeat_purchase))+
+tidy_ml_sales <- ml_sales %>% 
+  pivot_longer(cols = c("battery", "gear", "charger", "control", "drone", "parts"), names_to = "item") %>%
+  arrange(desc(value))
+    
+ggplot(tidy_ml_sales, aes(x = customer_id, y = value, fill = item))+
     geom_point(stat = "identity", position = "dodge") + 
   geom_jitter(width = .5, size = 1) +
     labs(title = "Shopping Turnover for Online Shop",
       y= "SKU's purchased", x = "Unique Users") +
     theme(axis.text.x=element_text(angle=45, hjust=1))
+
+
+
 
 ```
 

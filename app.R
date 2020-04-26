@@ -31,6 +31,12 @@ sales <- read.csv("raw_data/sales_2019-01-01_2019-12-31 (1).csv") %>%
   clean_names()
 
 
+tidy_ml_sales <- ml_sales %>% 
+  pivot_longer(cols = c("battery", "gear", "charger", "control", "drone", "parts"), names_to = "item") %>%
+  arrange(desc(value))
+
+
+
 purchases <- visits %>%
   filter(day == "2019-01-01"| day == "2019-02-01" | day == "2019-03-01" |  day == "2019-04-01" |  day ==
            "2019-05-01" | day == "2019-06-01" | day == "2019-07-01" | day == "2019-08-01" |  
@@ -119,6 +125,27 @@ predict(predict_drone, new_data = new_customer)
 predict(predict_parts, new_data = new_customer)
 
 
+
+text <- storesearch$original_query
+# Create a corpus  
+docs <- Corpus(VectorSource(text))
+
+docs <- docs %>%
+  tm_map(removeNumbers) %>%
+  tm_map(removePunctuation) %>%
+  tm_map(stripWhitespace)
+docs <- tm_map(docs, content_transformer(tolower))
+docs <- tm_map(docs, removeWords, stopwords("english"))
+
+dtm <- TermDocumentMatrix(docs) 
+matrix <- as.matrix(dtm) 
+words <- sort(rowSums(matrix),decreasing=TRUE) 
+df <- data.frame(word = names(words),freq=words)
+
+wordcloud(words = df$word, freq = df$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35,
+          colors=brewer.pal(8, "Dark2"))
+
 ui <- fluidPage(theme = shinytheme("flatly"), 
   
   navbarPage("Explore the data",
@@ -136,18 +163,18 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                                                            "Continue to checkout screen" = "total_checkouts",
                                                            "Order placed" = "total_orders_placed",
                                                            "Conversion rate" = "total_conversion")
-                                   ))))),
+                                   )))),
 
   fluidPage(                         
                            mainPanel(
                                h2("Exploring Sales and Customer Interaction"),
                                plotOutput("plot_1")
-                           )),
-  fluidPage(
+                           ))),
     
-    fluidPage(
+  tabPanel("Popular Searches",
+           
       # Application title
-      titlePanel("Word Cloud"),
+      titlePanel("Most popular search words on e-commerce site"),
       
       sidebarLayout(
         # Sidebar with a slider and selection inputs
@@ -156,18 +183,18 @@ ui <- fluidPage(theme = shinytheme("flatly"),
           hr(),
           sliderInput("freq",
                       "Minimum Frequency:",
-                      min = 1,  max = 50, value = 15),
+                      min = 1,  max = 30, value = 5),
           sliderInput("max",
                       "Maximum Number of Words:",
-                      min = 1,  max = 300,  value = 100)
+                      min = 1,  max = 30,  value = 10)
         ),
-        
+     fluidPage(   
         # Show Word Cloud
         mainPanel(
           plotOutput("wordplot")
         )
-      )
-    ),
+      )))
+    ,
     # Define UI (user interface) for application, which is the
     # formating/way the interface will look to users
     
@@ -177,38 +204,37 @@ ui <- fluidPage(theme = shinytheme("flatly"),
     #second tab, about I used h4 to set a header and p to specify a paragraph of
     #text that I entered
 # NEW TAB NOT SHOWING UP
-                        tabPanel("When Is Cash Used?",
+                        tabPanel("Predicting Purchases?",
                                  tabsetPanel(
-                                   tabPanel("Expenditures by Payment Type",
+                                   tabPanel("Creating suggestions off of what people purchase",
                                     
                                     #used select input within sidebar panel to create payment type choices 
                                     sidebarPanel(
                                       selectInput("payment", "Select a Payment Type",
-                                                  choices = c("Cash" = 1,
-                                                              "Check" = 2,
-                                                              "Credit Card" = 3,
-                                                              "Debit Card" = 4,
-                                                              "Prepaid/gift/EBT card" = 5,
-                                                              "Bank Account" = 6,
-                                                              "Online Banking" = 7)
+                                                  choices = c("Battery" = "battery",
+                                                              "Gear" = "gear",
+                                                              "Charger" = "charger",
+                                                              "Control" = "control",
+                                                              "Drone" = "drone",
+                                                              "Parts" = "parts")
                                       )))),
-                                    
+                                
                                     #within main panel have plot output which corresponds with function in output section below
                                     
                                     mainPanel(
-                                      h2("Transaction Volume is Highest at 1pm"),
-                                      plotOutput("plot_5")
-                                    ))),
+                                      h2("Predictions"),
+                                      plotOutput("plot_2")
+                                    )),
 # NEW TAB NOT SHOWING UP               
                 tabPanel("About", 
                          titlePanel("About"),
                          h3("Project Background and Motivations"),
-                         p("Hello, this is where I talk about my project."),
+                         p("Hello, and welcome to my Gov 1005 Final Project."),
                          h3("About Me"),
                          p("My name is Taylor Greenberg Goldy and I study Design Engineering in the Graduate School of Design and School of Engineering and Applied Sciences. This is the link for my repo:
-https://github.com/taylorgreenberggoldy/final_project.git
+https://github.com/taylorgreenberggoldy/final_project_2
 
-The data I am using for this project is looking at the behavior of customers and interactions they have on a shopping website that I have access to.  In this data, I'll be able to see how often people are shopping, what are they shopping for as well as what are they searching on the website for.  Through this study, I can hopefully be able to make suggestions to how to improve the overal UX of the site to let people navigate it more thoroughly.  I am slowly getting access to more of the data and will be able to add more files into this project however for now, these two provide sufficient data to get started.
+The data I am using for this project is looking at the behavior of customers and interactions they have on a shopping website that I have access to. In this data, I'll be able to see how often people are shopping, what are they shopping for as well as what are they searching on the website for. Through this study, I can hopefully be able to make suggestions to how to improve the overal UX of the site to let people navigate it more thoroughly. I am slowly getting access to more of the data and will be able to add more files into this project however for now, these two provide sufficient data to get started.
 
 To pull this data, I'm looking at shopify as well as google analytics that pulls basic measurements off of the website of the e-commerce site.
 
@@ -254,14 +280,6 @@ server <- function(input, output) {
             getTermMatrix(input$original_query)
           })
         })
-      })
-      
-      # Make the wordcloud drawing predictable during a session
-      wordcloud_rep <- repeatable(wordcloud)
-      
-      output$wordplot <- renderPlot({
-        #Create a vector containing only the text
-        
         text <- storesearch$original_query
         # Create a corpus  
         docs <- Corpus(VectorSource(text))
@@ -278,13 +296,40 @@ server <- function(input, output) {
         words <- sort(rowSums(matrix),decreasing=TRUE) 
         df <- data.frame(word = names(words),freq=words)
         
+      })
+      
+      # Make the wordcloud drawing predictable during a session
+      wordcloud_rep <- repeatable(wordcloud)
+      
+      output$wordplot <- renderPlot({
+        #Create a vector containing only the text
+        
+       
+        
         wordcloud(words = df$word, freq = df$freq, min.freq = 1,
                   max.words=200, random.order=FALSE, rot.per=0.35,
                   colors=brewer.pal(8, "Dark2"))
       })
-    }
     
+    
+datareact <- reactive({
+  tidy_ml_sales <- ml_sales %>% 
+    pivot_longer(cols = c("battery", "gear", "charger", "control", "drone", "parts"), names_to = "item") %>%
+    arrange(desc(value))
+})
 
+output$plot_2 <- renderPlot({
+  # generate type based on input$plot_type from ui
+  ggplot(tidy_ml_sales, aes(x = customer_id, y = value, fill = input$item))+
+    geom_point(stat = "identity", position = "dodge") + 
+    geom_jitter(width = .5, size = 1) +
+    labs(title = "Shopping Turnover for Online Shop",
+         y= "SKU's purchased", x = "Unique Users") +
+    theme(axis.text.x=element_text(angle=45, hjust=1))
+})
+
+
+}
 
 # Run the application
 shinyApp(ui = ui, server = server)
