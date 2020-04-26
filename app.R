@@ -13,6 +13,11 @@ library(ggplot2)
 library(tidyverse)
 library(janitor)
 library(memoise)
+library(rsconnect)
+library(tm)
+library(wordcloud2)
+library(wordcloud)
+library(tidymodels)
 
 #rsconnect::showLogs()
 
@@ -33,7 +38,85 @@ purchases <- visits %>%
   pivot_longer(cols = c(total_sessions, total_carts, total_checkouts, total_orders_placed, total_conversion), names_to = "action") 
 
 
+purchase_history <- sales %>%
+  select(product_title, product_type, customer_id, net_quantity, ordered_item_quantity) %>%
+  group_by(customer_id) %>%
+  count(., customer_id, name = "repeat_purchase") %>%
+  arrange(desc(repeat_purchase)) 
 
+total_purchase <- purchase_history %>%
+  ungroup() %>%
+  summarize(total_purchases = sum(repeat_purchase))
+
+
+options(scipen = 999)
+ml_sales <- sales %>%
+  mutate(battery = case_when(str_detect(product_title, regex("battery", ignore_case = TRUE)) ~ 1, TRUE ~ 0),
+         gear = case_when(str_detect(product_title, regex("gear", ignore_case = TRUE)) ~ 1, TRUE ~ 0), 
+         charger = case_when(str_detect(product_title, regex("charger", ignore_case = TRUE)) ~ 1, TRUE ~ 0),
+         control = case_when(str_detect(product_title, regex("control", ignore_case = TRUE)) ~ 1, TRUE ~ 0),
+         drone = case_when(str_detect(product_title, regex("drone", ignore_case = TRUE)) ~ 1, TRUE ~ 0),
+         parts = case_when(str_detect(product_title, regex("parts", ignore_case = TRUE)) ~ 1, TRUE ~ 0)
+  ) %>%
+  select(customer_id, battery, gear, charger, control, drone, parts) %>%
+  group_by(customer_id) %>% 
+  summarise_all(funs(sum))
+
+#%>%
+#arrange(desc(battery))
+
+
+cleaned_ml <- ml_sales %>%
+  mutate(battery_true = ifelse(battery != 0, 1, battery),
+         gear_true = ifelse(gear != 0, 1, gear),
+         charger_true = ifelse(charger != 0, 1, charger),
+         control_true = ifelse(control != 0, 1, control),
+         drone_true = ifelse(drone != 0, 1, drone),
+         parts_true = ifelse(parts != 0, 1, parts)) %>%
+  select(battery_true, gear_true, charger_true, control_true, drone_true, parts_true)
+
+
+
+#Save forest model as object
+model <- forest_mod <- rand_forest() %>%
+  set_engine("randomForest") %>%
+  set_mode("classification")
+
+predict_battery <- fit(forest_mod,
+                       factor(battery_true) ~ gear_true + charger_true + control_true + drone_true + parts_true,
+                       data = cleaned_ml)
+
+predict_gear <- fit(forest_mod,
+                    factor(gear_true) ~ battery_true + charger_true + control_true + drone_true + parts_true,
+                    data = cleaned_ml)
+
+predict_charger <- fit(forest_mod,
+                       factor(charger_true) ~ battery_true + gear_true + control_true + drone_true + parts_true,
+                       data = cleaned_ml)
+
+predict_control <- fit(forest_mod,
+                       factor(control_true) ~ battery_true + gear_true + charger_true + drone_true + parts_true,
+                       data = cleaned_ml)
+predict_drone <- fit(forest_mod,
+                     factor(drone_true) ~ battery_true + gear_true + charger_true + control_true + parts_true,
+                     data = cleaned_ml)
+predict_parts <- fit(forest_mod,
+                     factor(parts_true) ~ battery_true + gear_true + charger_true + control_true + drone_true,
+                     data = cleaned_ml)
+
+
+predict_battery
+
+new_customer <- tibble(battery_true = 1, gear_true = 1, charger_true = 0, control_true = 1, drone_true = 0, parts_true = 1)
+
+# Create new predicts for each category
+
+predict(predict_battery, new_data = new_customer)
+predict(predict_gear, new_data = new_customer)
+predict(predict_charger, new_data = new_customer)
+predict(predict_control, new_data = new_customer)
+predict(predict_drone, new_data = new_customer)
+predict(predict_parts, new_data = new_customer)
 
 
 ui <- fluidPage(theme = shinytheme("flatly"), 
