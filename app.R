@@ -19,14 +19,15 @@ library(wordcloud2)
 library(wordcloud)
 library(tidymodels)
 library(rstanarm)
+library(rstan)
 
 
 #rsconnect::showLogs()
 
-storesearch <- read.csv("storefront_searches_2020-02-29_2020-03-07.csv") %>%
+storesearch <- read.csv("raw_data/storefront_searches_2020-02-29_2020-03-07.csv") %>%
     clean_names()
 
-visits <- read.csv("visits_2019-01-01_2019-12-31.csv") %>%
+visits <- read.csv("raw_data/visits_2019-01-01_2019-12-31.csv") %>%
     clean_names()
 
 sales <- read.csv("raw_data/sales_2019-01-01_2019-12-31 (1).csv") %>%
@@ -306,21 +307,21 @@ server <- function(input, output) {
       })
     
     
-# datareact <- reactive({
-#   tidy_ml_sales <- ml_sales %>% 
-#     pivot_longer(cols = c("battery", "gear", "charger", "control", "drone", "parts"), names_to = "item") %>%
-#     arrange(desc(value))
-# })
-# 
-# output$plot_2 <- renderPlot({
-#   # generate type based on input$plot_type from ui
-#   ggplot(tidy_ml_sales, aes(x = customer_id, y = value, fill = input$item))+
-#     geom_point(stat = "identity", position = "dodge") + 
-#     geom_jitter(width = .5, size = 1) +
-#     labs(title = "Shopping Turnover for Online Shop",
-#          y= "SKU's purchased", x = "Unique Users") +
-#     theme(axis.text.x=element_text(angle=45, hjust=1))
-# })
+datareact <- reactive({
+  tidy_ml_sales <- ml_sales %>% 
+    pivot_longer(cols = c("battery", "gear", "charger", "control", "drone", "parts"), names_to = "item") %>%
+    arrange(desc(value))
+})
+
+output$plot_2 <- renderPlot({
+  # generate type based on input$plot_type from ui
+  ggplot(tidy_ml_sales, aes(x = customer_id, y = value, fill = input$item))+
+    geom_point(stat = "identity", position = "dodge") + 
+    geom_jitter(width = .5, size = 1) +
+    labs(title = "Shopping Turnover for Online Shop",
+         y= "SKU's purchased", x = "Unique Users") +
+    theme(axis.text.x=element_text(angle=45, hjust=1))
+})
 
 
 }
