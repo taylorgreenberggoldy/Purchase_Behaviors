@@ -18,6 +18,8 @@ library(tm)
 library(wordcloud2)
 library(wordcloud)
 library(tidymodels)
+library(rstanarm)
+
 
 #rsconnect::showLogs()
 
@@ -31,17 +33,11 @@ sales <- read.csv("raw_data/sales_2019-01-01_2019-12-31 (1).csv") %>%
   clean_names()
 
 
-tidy_ml_sales <- ml_sales %>% 
-  pivot_longer(cols = c("battery", "gear", "charger", "control", "drone", "parts"), names_to = "item") %>%
-  arrange(desc(value))
-
-
-
 purchases <- visits %>%
   filter(day == "2019-01-01"| day == "2019-02-01" | day == "2019-03-01" |  day == "2019-04-01" |  day ==
            "2019-05-01" | day == "2019-06-01" | day == "2019-07-01" | day == "2019-08-01" |  
-           day == "2019-09-01" |  day == "2019-10-01" |  day == "2019-11-01" |  day == "2019-12-01") %>%
-  pivot_longer(cols = c(total_sessions, total_carts, total_checkouts, total_orders_placed, total_conversion), names_to = "action") 
+           day == "2019-09-01" |  day == "2019-10-01" |  day == "2019-11-01" |  day == "2019-12-01") %>% 
+  pivot_longer(cols = c(total_sessions, total_carts, total_checkouts, total_orders_placed, total_conversion), names_to = "action")
 
 
 purchase_history <- sales %>%
@@ -82,47 +78,52 @@ cleaned_ml <- ml_sales %>%
   select(battery_true, gear_true, charger_true, control_true, drone_true, parts_true)
 
 
+tidy_ml_sales <- ml_sales %>% 
+  pivot_longer(cols = c("battery", "gear", "charger", "control", "drone", "parts"), names_to = "item") %>%
+  arrange(desc(value))
+
+
 
 #Save forest model as object
-model <- forest_mod <- rand_forest() %>%
-  set_engine("randomForest") %>%
-  set_mode("classification")
-
-predict_battery <- fit(forest_mod,
-                       factor(battery_true) ~ gear_true + charger_true + control_true + drone_true + parts_true,
-                       data = cleaned_ml)
-
-predict_gear <- fit(forest_mod,
-                    factor(gear_true) ~ battery_true + charger_true + control_true + drone_true + parts_true,
-                    data = cleaned_ml)
-
-predict_charger <- fit(forest_mod,
-                       factor(charger_true) ~ battery_true + gear_true + control_true + drone_true + parts_true,
-                       data = cleaned_ml)
-
-predict_control <- fit(forest_mod,
-                       factor(control_true) ~ battery_true + gear_true + charger_true + drone_true + parts_true,
-                       data = cleaned_ml)
-predict_drone <- fit(forest_mod,
-                     factor(drone_true) ~ battery_true + gear_true + charger_true + control_true + parts_true,
-                     data = cleaned_ml)
-predict_parts <- fit(forest_mod,
-                     factor(parts_true) ~ battery_true + gear_true + charger_true + control_true + drone_true,
-                     data = cleaned_ml)
-
-
-predict_battery
-
-new_customer <- tibble(battery_true = 1, gear_true = 1, charger_true = 0, control_true = 1, drone_true = 0, parts_true = 1)
-
-# Create new predicts for each category
-
-predict(predict_battery, new_data = new_customer)
-predict(predict_gear, new_data = new_customer)
-predict(predict_charger, new_data = new_customer)
-predict(predict_control, new_data = new_customer)
-predict(predict_drone, new_data = new_customer)
-predict(predict_parts, new_data = new_customer)
+# model <- forest_mod <- rand_forest() %>%
+#   set_engine("randomForest") %>%
+#   set_mode("classification")
+# 
+# predict_battery <- fit(forest_mod,
+#                        factor(battery_true) ~ gear_true + charger_true + control_true + drone_true + parts_true,
+#                        data = cleaned_ml)
+# 
+# predict_gear <- fit(forest_mod,
+#                     factor(gear_true) ~ battery_true + charger_true + control_true + drone_true + parts_true,
+#                     data = cleaned_ml)
+# 
+# predict_charger <- fit(forest_mod,
+#                        factor(charger_true) ~ battery_true + gear_true + control_true + drone_true + parts_true,
+#                        data = cleaned_ml)
+# 
+# predict_control <- fit(forest_mod,
+#                        factor(control_true) ~ battery_true + gear_true + charger_true + drone_true + parts_true,
+#                        data = cleaned_ml)
+# predict_drone <- fit(forest_mod,
+#                      factor(drone_true) ~ battery_true + gear_true + charger_true + control_true + parts_true,
+#                      data = cleaned_ml)
+# predict_parts <- fit(forest_mod,
+#                      factor(parts_true) ~ battery_true + gear_true + charger_true + control_true + drone_true,
+#                      data = cleaned_ml)
+# 
+# 
+# predict_battery
+# 
+# new_customer <- tibble(battery_true = 1, gear_true = 1, charger_true = 0, control_true = 1, drone_true = 0, parts_true = 1)
+# 
+# # Create new predicts for each category
+# 
+# predict(predict_battery, new_data = new_customer)
+# predict(predict_gear, new_data = new_customer)
+# predict(predict_charger, new_data = new_customer)
+# predict(predict_control, new_data = new_customer)
+# predict(predict_drone, new_data = new_customer)
+# predict(predict_parts, new_data = new_customer)
 
 
 
@@ -261,14 +262,7 @@ server <- function(input, output) {
             theme(axis.text.x=element_text(angle=45, hjust=1))
     })
     
-    # Text of the books downloaded from:
-    # A Mid Summer Night's Dream:
-    #  http://www.gutenberg.org/cache/epub/2242/pg2242.txt
-    # The Merchant of Venice:
-    #  http://www.gutenberg.org/cache/epub/2243/pg2243.txt
-    # Romeo and Juliet:
-    #  http://www.gutenberg.org/cache/epub/1112/pg1112.txt
-    
+
 
       terms <- reactive({
         # Change when the "update" button is pressed...
@@ -312,21 +306,21 @@ server <- function(input, output) {
       })
     
     
-datareact <- reactive({
-  tidy_ml_sales <- ml_sales %>% 
-    pivot_longer(cols = c("battery", "gear", "charger", "control", "drone", "parts"), names_to = "item") %>%
-    arrange(desc(value))
-})
-
-output$plot_2 <- renderPlot({
-  # generate type based on input$plot_type from ui
-  ggplot(tidy_ml_sales, aes(x = customer_id, y = value, fill = input$item))+
-    geom_point(stat = "identity", position = "dodge") + 
-    geom_jitter(width = .5, size = 1) +
-    labs(title = "Shopping Turnover for Online Shop",
-         y= "SKU's purchased", x = "Unique Users") +
-    theme(axis.text.x=element_text(angle=45, hjust=1))
-})
+# datareact <- reactive({
+#   tidy_ml_sales <- ml_sales %>% 
+#     pivot_longer(cols = c("battery", "gear", "charger", "control", "drone", "parts"), names_to = "item") %>%
+#     arrange(desc(value))
+# })
+# 
+# output$plot_2 <- renderPlot({
+#   # generate type based on input$plot_type from ui
+#   ggplot(tidy_ml_sales, aes(x = customer_id, y = value, fill = input$item))+
+#     geom_point(stat = "identity", position = "dodge") + 
+#     geom_jitter(width = .5, size = 1) +
+#     labs(title = "Shopping Turnover for Online Shop",
+#          y= "SKU's purchased", x = "Unique Users") +
+#     theme(axis.text.x=element_text(angle=45, hjust=1))
+# })
 
 
 }

@@ -5,8 +5,8 @@ account: taylor-greenberg-goldy
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2045943
-bundleId: 3042004
+bundleId: 3069275
 url: https://taylor-greenberg-goldy.shinyapps.io/final_project_2/
-when: 1587436500.80238
+when: 1587948911.1092
 asMultiple: FALSE
 asStatic: FALSE
