@@ -17,9 +17,9 @@ library(rsconnect)
 library(tm)
 library(wordcloud2)
 library(wordcloud)
-library(tidymodels)
-library(rstanarm)
-library(rstan)
+library(randomForest)
+#library(rstanarm)
+#library(rstan)
 
 
 #rsconnect::showLogs()
@@ -55,20 +55,20 @@ total_purchase <- purchase_history %>%
 options(scipen = 999)
 ml_sales <- sales %>%
   mutate(battery = case_when(str_detect(product_title, regex("battery", ignore_case = TRUE)) ~ 1, TRUE ~ 0),
-         gear = case_when(str_detect(product_title, regex("gear", ignore_case = TRUE)) ~ 1, TRUE ~ 0), 
+         gear = case_when(str_detect(product_title, regex("gear", ignore_case = TRUE)) ~ 1, TRUE ~ 0),
          charger = case_when(str_detect(product_title, regex("charger", ignore_case = TRUE)) ~ 1, TRUE ~ 0),
          control = case_when(str_detect(product_title, regex("control", ignore_case = TRUE)) ~ 1, TRUE ~ 0),
          drone = case_when(str_detect(product_title, regex("drone", ignore_case = TRUE)) ~ 1, TRUE ~ 0),
          parts = case_when(str_detect(product_title, regex("parts", ignore_case = TRUE)) ~ 1, TRUE ~ 0)
   ) %>%
   select(customer_id, battery, gear, charger, control, drone, parts) %>%
-  group_by(customer_id) %>% 
+  group_by(customer_id) %>%
   summarise_all(funs(sum))
-
-#%>%
-#arrange(desc(battery))
-
-
+# 
+# #%>%
+# #arrange(desc(battery))
+# 
+# 
 cleaned_ml <- ml_sales %>%
   mutate(battery_true = ifelse(battery != 0, 1, battery),
          gear_true = ifelse(gear != 0, 1, gear),
@@ -77,15 +77,15 @@ cleaned_ml <- ml_sales %>%
          drone_true = ifelse(drone != 0, 1, drone),
          parts_true = ifelse(parts != 0, 1, parts)) %>%
   select(battery_true, gear_true, charger_true, control_true, drone_true, parts_true)
-
-
-tidy_ml_sales <- ml_sales %>% 
-  pivot_longer(cols = c("battery", "gear", "charger", "control", "drone", "parts"), names_to = "item") %>%
-  arrange(desc(value))
-
-
-
-#Save forest model as object
+# 
+# 
+# tidy_ml_sales <- ml_sales %>% 
+#   pivot_longer(cols = c("battery", "gear", "charger", "control", "drone", "parts"), names_to = "item") %>%
+#   arrange(desc(value))
+# 
+# 
+# 
+# #Save forest model as object
 # model <- forest_mod <- rand_forest() %>%
 #   set_engine("randomForest") %>%
 #   set_mode("classification")
@@ -212,21 +212,34 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                                     
                                     #used select input within sidebar panel to create payment type choices 
                                     sidebarPanel(
-                                      selectInput("payment", "Select a Payment Type",
-                                                  choices = c("Battery" = "battery",
+                                      # column(4, offset = 1,
+                                      #        selectInput('test', 'Battery', names(predict_battery)),
+                                      #        selectInput('predicted', 'Gear', names(predict_battery), names(predict_battery)[[2]]),
+                                      #        selectInput('color', 'Charger', c('None', names(predict_battery))),
+                                      #               selectInput('drone', 'Control', c(None='.', names(predict_battery))),
+                                      #               selectInput('drone', 'Drone', c(None='.', names(predict_battery))),
+                                      #               selectInput('facet_col', 'Parts', c(None='.', names(predict_battery)))
+
+                                       selectInput("payment", "Select a Payment Type",
+                                                   choices = c("Battery" = "battery",
                                                               "Gear" = "gear",
                                                               "Charger" = "charger",
-                                                              "Control" = "control",
-                                                              "Drone" = "drone",
-                                                              "Parts" = "parts")
-                                      )))),
+                                                             "Control" = "control",
+                                                             "Drone" = "drone",
+                                                             "Parts" = "parts")
+                                      )
+                                   )),
                                 
                                     #within main panel have plot output which corresponds with function in output section below
                                     
                                     mainPanel(
                                       h2("Predictions"),
                                       plotOutput("plot_2")
-                                    )),
+                                    ))),
+
+
+
+
 # NEW TAB NOT SHOWING UP               
                 tabPanel("About", 
                          titlePanel("About"),
@@ -262,8 +275,47 @@ server <- function(input, output) {
                  y= "Actions", x = "Month")+
             theme(axis.text.x=element_text(angle=45, hjust=1))
     })
-    
+#     
+#     new_customer <- tibble(battery_true = input$battery, gear_true = input$gear, charger_true = 0, control_true = 1, drone_true = 0, parts_true = 1)
+#     
+#     # Create new predicts for each category
+#     
+     # battery_predict<-predict(predict_battery, new_data = new_customer)
+     # predict(predict_gear, new_data = new_customer)
+     # predict(predict_charger, new_data = new_customer)
+     # predict(predict_control, new_data = new_customer)
+     # predict(predict_drone, new_data = new_customer)
+     # predict(predict_parts, new_data = new_customer)
+     
+output$suggesteditems <- renderText({
+  
+#new_customer <- tibble(battery_true = input$battery, gear_true = input$gear, charger_true = input$charger, control_true = input$control, drone_true = input$drone, parts_true = input$parts)
 
+  predict_battery <- randomForest(factor(parts_true) ~ battery_true + gear_true + charger_true + control_true + drone_true,
+                                  data =  cleaned_ml)
+  # predict_gear <- randomForest(factor(gear_true) ~ battery_true + parts_true + charger_true + control_true + drone_true,
+  #                                 data =  cleaned_ml)
+  # predict_parts <- randomForest(factor(parts_true) ~ battery_true + gear_true + charger_true + control_true + drone_true,
+  #                              data =  cleaned_ml)
+  # predict_charger <- randomForest(factor(charger_true) ~ battery_true + gear_true + parts_true + control_true + drone_true,
+  #                               data =  cleaned_ml)
+  # predict_control <- randomForest(factor(control_true) ~ battery_true + gear_true + parts_true + charger_true + drone_true,
+  #                                 data =  cleaned_ml)
+  # predict_drone <- randomForest(factor(drone_true) ~ battery_true + gear_true + parts_true + charger_true + control_true,
+  #                                 data =  cleaned_ml)
+  predict(predict_battery, newdata = new_customer)[[1]]
+  
+  # batteryPrediction<-ifelse(battery_predict == 1, "Battery ", "")
+  # gearPrediction<-ifelse(gear_predict == 1, "Gear ", "")
+  # chargerPrediction<-ifelse(charger_predict == 1, "Charger ", "")
+  # controlPrediction<-ifelse(control_predict == 1, "Control ", "")
+  # dronePrediction<-ifelse(drone_predict == 1, "Drone ", "")
+  # partsPrediction<-ifelse(parts_predict == 1, "Parts ", "")
+#   
+   #itemList<-paste("Suggested items:", batteryPrediction, gearPrediction)
+#   print(itemList)
+  #itemList<-paste("Suggested items:", predict_battery, predict_gear, predict_parts, predict_charger, predict_control, predict_drone)
+ })
 
       terms <- reactive({
         # Change when the "update" button is pressed...
@@ -307,21 +359,21 @@ server <- function(input, output) {
       })
     
     
-datareact <- reactive({
-  tidy_ml_sales <- ml_sales %>% 
-    pivot_longer(cols = c("battery", "gear", "charger", "control", "drone", "parts"), names_to = "item") %>%
-    arrange(desc(value))
-})
-
-output$plot_2 <- renderPlot({
-  # generate type based on input$plot_type from ui
-  ggplot(tidy_ml_sales, aes(x = customer_id, y = value, fill = input$item))+
-    geom_point(stat = "identity", position = "dodge") + 
-    geom_jitter(width = .5, size = 1) +
-    labs(title = "Shopping Turnover for Online Shop",
-         y= "SKU's purchased", x = "Unique Users") +
-    theme(axis.text.x=element_text(angle=45, hjust=1))
-})
+# datareact <- reactive({
+#   tidy_ml_sales <- ml_sales %>% 
+#     pivot_longer(cols = c("battery", "gear", "charger", "control", "drone", "parts"), names_to = "item") %>%
+#     arrange(desc(value))
+# })
+# 
+# output$plot_2 <- renderPlot({
+#   # generate type based on input$plot_type from ui
+#   ggplot(tidy_ml_sales, aes(x = customer_id, y = value, fill = input$item))+
+#     geom_point(stat = "identity", position = "dodge") + 
+#     geom_jitter(width = .5, size = 1) +
+#     labs(title = "Shopping Turnover for Online Shop",
+#          y= "SKU's purchased", x = "Unique Users") +
+#     theme(axis.text.x=element_text(angle=45, hjust=1))
+# })
 
 
 }
