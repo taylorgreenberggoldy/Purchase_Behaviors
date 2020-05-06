@@ -18,7 +18,7 @@ library(wordcloud2)
 library(tm)
 library(wordcloud2)
 library(wordcloud)
-library(tidymodels)
+#library(tidymodels)
 
 
 storesearch <- read.csv("raw_data/storefront_searches_2020-02-29_2020-03-07.csv") %>%

@@ -300,7 +300,7 @@ server <- function(input, output) {
             ggplot(aes(x = day, y = value, fill = input$action))+
             geom_bar(stat = "identity", position = "dodge") +
             labs(title = "Shopping Turnover for Online Shop",
-                 y= "Actions", x = "Month")+
+                 y = "Actions", x = "Month")+
             theme(axis.text.x=element_text(angle=45, hjust=1))
     })
 #     
@@ -373,11 +373,8 @@ new_customer <- tibble(battery_true = input$battery, gear_true = input$gear, cha
       
       output$wordplot <- renderPlot({
         #Create a vector containing only the text
-        
-       
-        
-        wordcloud(words = df$word, freq = df$freq, min.freq = 1,
-                  max.words=200, random.order=FALSE, rot.per=0.35,
+        wordcloud(words = df$word, freq = df$freq, min.freq = input$freq,
+                  max.words= input$max, random.order=FALSE, rot.per=0.35,
                   colors=brewer.pal(8, "Dark2"))
       })
     
