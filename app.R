@@ -18,6 +18,7 @@ library(tm)
 library(wordcloud2)
 library(wordcloud)
 library(randomForest)
+library(slickR)
 #library(rstanarm)
 #library(rstan)
 
@@ -64,11 +65,7 @@ ml_sales <- sales %>%
   select(customer_id, battery, gear, charger, control, drone, parts) %>%
   group_by(customer_id) %>%
   summarise_all(funs(sum))
-# 
-# #%>%
-# #arrange(desc(battery))
-# 
-# 
+
 cleaned_ml <- ml_sales %>%
   mutate(battery_true = ifelse(battery != 0, 1, battery),
          gear_true = ifelse(gear != 0, 1, gear),
@@ -77,8 +74,42 @@ cleaned_ml <- ml_sales %>%
          drone_true = ifelse(drone != 0, 1, drone),
          parts_true = ifelse(parts != 0, 1, parts)) %>%
   select(battery_true, gear_true, charger_true, control_true, drone_true, parts_true)
-# 
-# 
+
+
+#predict_battery <- randomForest(factor(parts_true) ~ battery_true + gear_true + charger_true + control_true + drone_true,
+                                #data =  cleaned_ml)
+#saveRDS(predict_battery, file = "predict_battery.rds")
+
+predict_battery = readRDS("predict_battery.rds")
+
+
+#predict_gear <- randomForest(factor(gear_true) ~ battery_true + parts_true + charger_true + control_true + drone_true,
+                              #data =  cleaned_ml)
+#saveRDS(predict_gear, file = "predict_gear.rds")
+predict_gear = readRDS("predict_gear.rds")
+ 
+ 
+#predict_parts <- randomForest(factor(parts_true) ~ battery_true + gear_true + charger_true + control_true + drone_true,
+                              #data =  cleaned_ml)
+#saveRDS(predict_parts, file = "predict_parts.rds")
+predict_parts = readRDS("predict_parts.rds")
+
+#predict_charger <- randomForest(factor(charger_true) ~ battery_true + gear_true + parts_true + control_true + drone_true,
+                                #data =  cleaned_ml)
+#saveRDS(predict_charger, file = "predict_charger.rds")
+predict_charger = readRDS("predict_charger.rds")
+
+# predict_control <- randomForest(factor(control_true) ~ battery_true + gear_true + parts_true + charger_true + drone_true,
+#                                  data =  cleaned_ml)
+#  saveRDS(predict_control, file = "predict_control.rds")
+ predict_control = readRDS("predict_control.rds")
+ 
+ predict_drone <- randomForest(factor(drone_true) ~ battery_true + gear_true + parts_true + charger_true + control_true,
+                               data =  cleaned_ml)
+ 
+ saveRDS(predict_drone, file = "predict_drone.rds")
+ predict_drone = readRDS("predict_drone.rds")
+ 
 # tidy_ml_sales <- ml_sales %>% 
 #   pivot_longer(cols = c("battery", "gear", "charger", "control", "drone", "parts"), names_to = "item") %>%
 #   arrange(desc(value))
@@ -205,36 +236,33 @@ ui <- fluidPage(theme = shinytheme("flatly"),
     #referencing map, which I then specified in the server section below, inside the
     #second tab, about I used h4 to set a header and p to specify a paragraph of
     #text that I entered
-# NEW TAB NOT SHOWING UP
+
                         tabPanel("Predicting Purchases?",
                                  tabsetPanel(
                                    tabPanel("Creating suggestions off of what people purchase",
                                     
                                     #used select input within sidebar panel to create payment type choices 
                                     sidebarPanel(
-                                      # column(4, offset = 1,
-                                      #        selectInput('test', 'Battery', names(predict_battery)),
-                                      #        selectInput('predicted', 'Gear', names(predict_battery), names(predict_battery)[[2]]),
-                                      #        selectInput('color', 'Charger', c('None', names(predict_battery))),
-                                      #               selectInput('drone', 'Control', c(None='.', names(predict_battery))),
-                                      #               selectInput('drone', 'Drone', c(None='.', names(predict_battery))),
-                                      #               selectInput('facet_col', 'Parts', c(None='.', names(predict_battery)))
+                                       column(8, offset = 1,
+                                              selectInput('battery', 'Battery', choices = list("Yes" = 1, "No" = 0)),
+                                              selectInput('gear', 'Gear', choices = list("Yes" = 1, "No" = 0)),
+                                              selectInput('charger', 'Charger', choices = list("Yes" = 1, "No" = 0)),
+                                              selectInput('drone', 'Drone', choices = list("Yes" = 1, "No" = 0)),
+                                              selectInput('parts', 'Parts', choices = list("Yes" = 1, "No" = 0)),
+                                              selectInput('control', 'Control', choices = list("Yes" = 1, "No" = 0))
+                                              
+                                              
+                                          
 
-                                       selectInput("payment", "Select a Payment Type",
-                                                   choices = c("Battery" = "battery",
-                                                              "Gear" = "gear",
-                                                              "Charger" = "charger",
-                                                             "Control" = "control",
-                                                             "Drone" = "drone",
-                                                             "Parts" = "parts")
+        
                                       )
                                    )),
                                 
                                     #within main panel have plot output which corresponds with function in output section below
                                     
                                     mainPanel(
-                                      h2("Predictions"),
-                                      plotOutput("plot_2")
+                                     textOutput("suggesteditems"),
+                                     slickROutput("slickr", width = "500px")
                                     ))),
 
 
@@ -289,32 +317,27 @@ server <- function(input, output) {
      
 output$suggesteditems <- renderText({
   
-#new_customer <- tibble(battery_true = input$battery, gear_true = input$gear, charger_true = input$charger, control_true = input$control, drone_true = input$drone, parts_true = input$parts)
+new_customer <- tibble(battery_true = input$battery, gear_true = input$gear, charger_true = input$charger, control_true = input$control, drone_true = input$drone, parts_true = input$parts)
 
-  predict_battery <- randomForest(factor(parts_true) ~ battery_true + gear_true + charger_true + control_true + drone_true,
-                                  data =  cleaned_ml)
-  # predict_gear <- randomForest(factor(gear_true) ~ battery_true + parts_true + charger_true + control_true + drone_true,
-  #                                 data =  cleaned_ml)
-  # predict_parts <- randomForest(factor(parts_true) ~ battery_true + gear_true + charger_true + control_true + drone_true,
-  #                              data =  cleaned_ml)
-  # predict_charger <- randomForest(factor(charger_true) ~ battery_true + gear_true + parts_true + control_true + drone_true,
-  #                               data =  cleaned_ml)
-  # predict_control <- randomForest(factor(control_true) ~ battery_true + gear_true + parts_true + charger_true + drone_true,
-  #                                 data =  cleaned_ml)
-  # predict_drone <- randomForest(factor(drone_true) ~ battery_true + gear_true + parts_true + charger_true + control_true,
-  #                                 data =  cleaned_ml)
   predict(predict_battery, newdata = new_customer)[[1]]
   
-  # batteryPrediction<-ifelse(battery_predict == 1, "Battery ", "")
-  # gearPrediction<-ifelse(gear_predict == 1, "Gear ", "")
-  # chargerPrediction<-ifelse(charger_predict == 1, "Charger ", "")
-  # controlPrediction<-ifelse(control_predict == 1, "Control ", "")
-  # dronePrediction<-ifelse(drone_predict == 1, "Drone ", "")
-  # partsPrediction<-ifelse(parts_predict == 1, "Parts ", "")
+   batteryPrediction<-ifelse(predict_battery == 1, "Battery ", "")
+   gearPrediction<-ifelse(predict_gear == 1, "Gear ", "")
+   chargerPrediction<-ifelse(predict_charger == 1, "Charger ", "")
+   controlPrediction<-ifelse(predict_control == 1, "Control ", "")
+   dronePrediction<-ifelse(predict_drone == 1, "Drone ", "")
+   partsPrediction<-ifelse(predict_parts == 1, "Parts ", "")
 #   
-   #itemList<-paste("Suggested items:", batteryPrediction, gearPrediction)
-#   print(itemList)
-  #itemList<-paste("Suggested items:", predict_battery, predict_gear, predict_parts, predict_charger, predict_control, predict_drone)
+#itemList<-paste("Suggested items:", batteryPrediction)
+   
+   as.numeric(unlist(batteryPrediction, gearPrediction, chargerPrediction, controlPrediction, dronePrediction, partsPrediction))
+  itemList<-paste("Suggested items:", predict_battery, predict_gear, predict_parts, predict_charger, predict_control, predict_drone)
+   print(itemList)
+   renderSlickR({
+     imgs <- list.files("D:/final_project_2/raw_data/imgs/", pattern = ".png", full.names = TRUE)
+     slickR(imgs)
+   })
+   
  })
 
       terms <- reactive({
