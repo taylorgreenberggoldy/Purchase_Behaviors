@@ -5,9 +5,9 @@ account: taylor-greenberg-goldy
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 2045943
-bundleId: 3108783
+bundleId: 3121422
 url: https://taylor-greenberg-goldy.shinyapps.io/final_project_2/
-when: 1588728114.13328
+when: 1588957450.84863
 asMultiple: FALSE
 asStatic: FALSE
 ignoredFiles: about.Rmd|sales_2019-01-01_2019-12-31 (1).csv|storefront_searches_2020-02-29_2020-03-07.csv|visits_2019-01-01_2019-12-31.csv

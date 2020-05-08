@@ -19,11 +19,8 @@ library(wordcloud2)
 library(wordcloud)
 library(randomForest)
 library(slickR)
-#library(rstanarm)
-#library(rstan)
 
-
-#rsconnect::showLogs()
+# Read in my data here
 
 storesearch <- read.csv("raw_data/storefront_searches_2020-02-29_2020-03-07.csv") %>%
     clean_names()
@@ -34,6 +31,7 @@ visits <- read.csv("raw_data/visits_2019-01-01_2019-12-31.csv") %>%
 sales <- read.csv("raw_data/sales_2019-01-01_2019-12-31 (1).csv") %>%
   clean_names()
 
+# Created a few edits to the data
 
 purchases <- visits %>%
   filter(day == "2019-01-01"| day == "2019-02-01" | day == "2019-03-01" |  day == "2019-04-01" |  day ==
@@ -52,6 +50,7 @@ total_purchase <- purchase_history %>%
   ungroup() %>%
   summarize(total_purchases = sum(repeat_purchase))
 
+# Createed new columns that showed customers purchases and if they purchased certain items
 
 options(scipen = 999)
 ml_sales <- sales %>%
@@ -66,6 +65,8 @@ ml_sales <- sales %>%
   group_by(customer_id) %>%
   summarise_all(funs(sum))
 
+# Cleaned my data again to make sure it's a 0 or 1 that shows
+
 cleaned_ml <- ml_sales %>%
   mutate(battery_true = ifelse(battery != 0, 1, battery),
          gear_true = ifelse(gear != 0, 1, gear),
@@ -75,6 +76,8 @@ cleaned_ml <- ml_sales %>%
          parts_true = ifelse(parts != 0, 1, parts)) %>%
   select(battery_true, gear_true, charger_true, control_true, drone_true, parts_true)
 
+# Below is the code I used to read in each of my randomForests and saved it as
+# an RDS.  I kept this code to remember how it is done for the future
 
 #predict_battery <- randomForest(factor(parts_true) ~ battery_true + gear_true + charger_true + control_true + drone_true,
                                 #data =  cleaned_ml)
@@ -102,6 +105,7 @@ predict_charger = readRDS("predict_charger.rds")
 # predict_control <- randomForest(factor(control_true) ~ battery_true + gear_true + parts_true + charger_true + drone_true,
 #                                  data =  cleaned_ml)
 #  saveRDS(predict_control, file = "predict_control.rds")
+
  predict_control = readRDS("predict_control.rds")
  
  predict_drone <- randomForest(factor(drone_true) ~ battery_true + gear_true + parts_true + charger_true + control_true,
@@ -109,55 +113,9 @@ predict_charger = readRDS("predict_charger.rds")
  
  saveRDS(predict_drone, file = "predict_drone.rds")
  predict_drone = readRDS("predict_drone.rds")
- 
-# tidy_ml_sales <- ml_sales %>% 
-#   pivot_longer(cols = c("battery", "gear", "charger", "control", "drone", "parts"), names_to = "item") %>%
-#   arrange(desc(value))
-# 
-# 
-# 
-# #Save forest model as object
-# model <- forest_mod <- rand_forest() %>%
-#   set_engine("randomForest") %>%
-#   set_mode("classification")
-# 
-# predict_battery <- fit(forest_mod,
-#                        factor(battery_true) ~ gear_true + charger_true + control_true + drone_true + parts_true,
-#                        data = cleaned_ml)
-# 
-# predict_gear <- fit(forest_mod,
-#                     factor(gear_true) ~ battery_true + charger_true + control_true + drone_true + parts_true,
-#                     data = cleaned_ml)
-# 
-# predict_charger <- fit(forest_mod,
-#                        factor(charger_true) ~ battery_true + gear_true + control_true + drone_true + parts_true,
-#                        data = cleaned_ml)
-# 
-# predict_control <- fit(forest_mod,
-#                        factor(control_true) ~ battery_true + gear_true + charger_true + drone_true + parts_true,
-#                        data = cleaned_ml)
-# predict_drone <- fit(forest_mod,
-#                      factor(drone_true) ~ battery_true + gear_true + charger_true + control_true + parts_true,
-#                      data = cleaned_ml)
-# predict_parts <- fit(forest_mod,
-#                      factor(parts_true) ~ battery_true + gear_true + charger_true + control_true + drone_true,
-#                      data = cleaned_ml)
-# 
-# 
-# predict_battery
-# 
-# new_customer <- tibble(battery_true = 1, gear_true = 1, charger_true = 0, control_true = 1, drone_true = 0, parts_true = 1)
-# 
-# # Create new predicts for each category
-# 
-# predict(predict_battery, new_data = new_customer)
-# predict(predict_gear, new_data = new_customer)
-# predict(predict_charger, new_data = new_customer)
-# predict(predict_control, new_data = new_customer)
-# predict(predict_drone, new_data = new_customer)
-# predict(predict_parts, new_data = new_customer)
 
 
+# This is for my wordcloud that I found a similar code online
 
 text <- storesearch$original_query
 # Create a corpus  
@@ -221,6 +179,7 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                       "Maximum Number of Words:",
                       min = 1,  max = 30,  value = 10)
         ),
+        
      fluidPage(   
         # Show Word Cloud
         mainPanel(
@@ -241,7 +200,8 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                                  tabsetPanel(
                                    tabPanel("Creating suggestions off of what people purchase",
                                     
-                                    #used select input within sidebar panel to create payment type choices 
+                                    #Used select input within sidebar panel to create payment type choices 
+                                    
                                     sidebarPanel(
                                        column(8, offset = 1,
                                               selectInput('battery', 'Battery', choices = list("Yes" = 1, "No" = 0)),
@@ -250,11 +210,7 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                                               selectInput('drone', 'Drone', choices = list("Yes" = 1, "No" = 0)),
                                               selectInput('parts', 'Parts', choices = list("Yes" = 1, "No" = 0)),
                                               selectInput('control', 'Control', choices = list("Yes" = 1, "No" = 0))
-                                              
-                                              
                                           
-
-        
                                       )
                                    )),
                                 
@@ -262,16 +218,16 @@ ui <- fluidPage(theme = shinytheme("flatly"),
                                     
                                     mainPanel(
                                      textOutput("suggesteditems"),
-                                     slickROutput("slickr", width = "500px")
+                                     slickROutput("photos", width = "500px")
                                     ))),
 
 
 
 
-# NEW TAB NOT SHOWING UP               
+# My about tab            
                 tabPanel("About", 
                          titlePanel("About"),
-                         h3("Project Background and Motivations"),
+                         h3("Project Background"),
                          p("Hello, and welcome to my Gov 1005 Final Project."),
                          h3("About Me"),
                          p("My name is Taylor Greenberg Goldy and I study Design Engineering in the Graduate School of Design and School of Engineering and Applied Sciences. This is the link for my repo:
@@ -284,6 +240,8 @@ To pull this data, I'm looking at shopify as well as google analytics that pulls
              You can reach me at taylorgg@mde.harvard.edu"))))
 
 server <- function(input, output) {
+  
+  # Made this filter to 
     datareact <- reactive({
         visits %>%
             filter(day == "2019-01-01"| day == "2019-02-01" | day == "2019-03-01" |  day == "2019-04-01" |
@@ -293,8 +251,10 @@ server <- function(input, output) {
                                   total_conversion), names_to = "action")
     })
     
+    # Creating a plot for my first page on purchase history
+    
     output$plot_1 <- renderPlot({
-        # generate type based on input$plot_type from ui
+
         purchases %>%
             filter(action == input$action) %>%
             ggplot(aes(x = day, y = value, fill = input$action))+
@@ -303,43 +263,68 @@ server <- function(input, output) {
                  y = "Actions", x = "Month")+
             theme(axis.text.x=element_text(angle=45, hjust=1))
     })
-#     
-#     new_customer <- tibble(battery_true = input$battery, gear_true = input$gear, charger_true = 0, control_true = 1, drone_true = 0, parts_true = 1)
-#     
-#     # Create new predicts for each category
-#     
-     # battery_predict<-predict(predict_battery, new_data = new_customer)
-     # predict(predict_gear, new_data = new_customer)
-     # predict(predict_charger, new_data = new_customer)
-     # predict(predict_control, new_data = new_customer)
-     # predict(predict_drone, new_data = new_customer)
-     # predict(predict_parts, new_data = new_customer)
-     
-output$suggesteditems <- renderText({
-  
-new_customer <- tibble(battery_true = input$battery, gear_true = input$gear, charger_true = input$charger, control_true = input$control, drone_true = input$drone, parts_true = input$parts)
 
-  predict(predict_battery, newdata = new_customer)[[1]]
+     
+
+      new_customer_tibble <- reactive({
   
-   batteryPrediction<-ifelse(predict_battery == 1, "Battery ", "")
-   gearPrediction<-ifelse(predict_gear == 1, "Gear ", "")
-   chargerPrediction<-ifelse(predict_charger == 1, "Charger ", "")
-   controlPrediction<-ifelse(predict_control == 1, "Control ", "")
-   dronePrediction<-ifelse(predict_drone == 1, "Drone ", "")
-   partsPrediction<-ifelse(predict_parts == 1, "Parts ", "")
-#   
-#itemList<-paste("Suggested items:", batteryPrediction)
-   
-   as.numeric(unlist(batteryPrediction, gearPrediction, chargerPrediction, controlPrediction, dronePrediction, partsPrediction))
-  itemList<-paste("Suggested items:", predict_battery, predict_gear, predict_parts, predict_charger, predict_control, predict_drone)
-   print(itemList)
-   renderSlickR({
-     imgs <- list.files("D:/final_project_2/raw_data/imgs/", pattern = ".png", full.names = TRUE)
-     slickR(imgs)
-   })
-   
+      new_customer <- tibble(battery_true = input$battery, gear_true = input$gear, charger_true = input$charger, 
+                       control_true = input$control, drone_true = input$drone, parts_true = input$parts)
+})   
+
+    output$suggesteditems <- renderText({
+
+
+      new_customer <- new_customer_tibble()
+
+# Data from above for machine learning model for purchase history
+
+
+      batteryPrediction<-ifelse(as.numeric(predict(predict_battery, newdata = new_customer)[[1]]) == 1, "Battery ", "")
+      gearPrediction<-ifelse(as.numeric(predict(predict_gear, newdata = new_customer)[[1]]) == 1, "Gear ", "")
+      chargerPrediction<-ifelse(as.numeric(predict(predict_charger, newdata = new_customer)[[1]]) == 1, "Charger ", "")
+      controlPrediction<-ifelse(as.numeric(predict(predict_control, newdata = new_customer)[[1]]) == 1, "Control ", "")
+      dronePrediction<-ifelse(as.numeric(predict(predict_drone, newdata = new_customer)[[1]]) == 1, "Drone ", "")
+      partsPrediction<-ifelse(as.numeric(predict(predict_parts, newdata = new_customer)[[1]]) == 1, "Parts ", "")
+
+    
+   itemList<-paste("Suggested items:", batteryPrediction, gearPrediction, chargerPrediction, controlPrediction, 
+                   dronePrediction, partsPrediction)
+    print(itemList)
+    
  })
 
+# My Teaching Fellow, Mitchell Kilborn was incredibly helping in walking me
+# through how to make this model interactive
+
+imglist <- reactive({
+  
+  new_customer <- new_customer_tibble()
+  
+  batteryPrediction<-ifelse(as.numeric(predict(predict_battery, newdata = new_customer)[[1]]) == 1, "battery", "")
+  gearPrediction<-ifelse(as.numeric(predict(predict_gear, newdata = new_customer)[[1]]) == 1, "gear", "")
+  chargerPrediction<-ifelse(as.numeric(predict(predict_charger, newdata = new_customer)[[1]]) == 1, "charger", "")
+  controlPrediction<-ifelse(as.numeric(predict(predict_control, newdata = new_customer)[[1]]) == 1, "control", "")
+  dronePrediction<-ifelse(as.numeric(predict(predict_drone, newdata = new_customer)[[1]]) == 1, "drone", "")
+  partsPrediction<-ifelse(as.numeric(predict(predict_parts, newdata = new_customer)[[1]]) == 1, "parts", "")
+
+# Below is what needed to be created to create an image output
+  
+  itemList<-paste(c(batteryPrediction, gearPrediction, chargerPrediction, controlPrediction, dronePrediction, partsPrediction), collapse = "|")
+  
+  imgs <- list.files("imgs/", pattern=".png", full.names = TRUE)
+  imgs <- imgs[str_detect(imgs, itemList)]
+  
+})  
+
+# After we created above, we can feed it into slickR
+
+output$photos <- renderSlickR({
+  imgs <- imglist()
+  slickR(imgs)
+  
+})
+  
       terms <- reactive({
         # Change when the "update" button is pressed...
         input$update
@@ -378,24 +363,6 @@ new_customer <- tibble(battery_true = input$battery, gear_true = input$gear, cha
                   colors=brewer.pal(8, "Dark2"))
       })
     
-    
-# datareact <- reactive({
-#   tidy_ml_sales <- ml_sales %>% 
-#     pivot_longer(cols = c("battery", "gear", "charger", "control", "drone", "parts"), names_to = "item") %>%
-#     arrange(desc(value))
-# })
-# 
-# output$plot_2 <- renderPlot({
-#   # generate type based on input$plot_type from ui
-#   ggplot(tidy_ml_sales, aes(x = customer_id, y = value, fill = input$item))+
-#     geom_point(stat = "identity", position = "dodge") + 
-#     geom_jitter(width = .5, size = 1) +
-#     labs(title = "Shopping Turnover for Online Shop",
-#          y= "SKU's purchased", x = "Unique Users") +
-#     theme(axis.text.x=element_text(angle=45, hjust=1))
-# })
-
-
 }
 
 # Run the application
